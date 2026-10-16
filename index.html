@@ -61,6 +61,13 @@ tr.cl{cursor:pointer}tr.cl:hover{background:var(--bg)}
 #adm{display:none;border:2px dashed var(--ac)}#adm.show{display:block}
 .btn{border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--bg);color:var(--tx);margin:4px 4px 4px 0}.btn.p{background:var(--ac);color:#fff}
 #msg{margin:8px 0;font-weight:600;color:var(--wa)}.empty{text-align:center;padding:30px 10px;color:var(--mu)}
+.tabs button{padding:12px 6px;font-size:14px}.days{position:relative}
+.mx td,.mx th{padding:8px 6px}.mx td:first-child,.mx th:first-child{position:sticky;left:0;background:var(--card);z-index:1}
+.mx th.cl2{cursor:pointer}.mx th.on{color:var(--ac);text-decoration:underline}
+.bars{display:flex;gap:4px;align-items:flex-end;height:130px;overflow-x:auto;padding-top:4px}
+.bc{flex:1 0 36px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;cursor:pointer;font-size:12px}
+.bc i{display:block;width:100%;background:var(--ac);opacity:.4;border-radius:6px 6px 0 0}.bc.on i{opacity:1}.bc small{white-space:nowrap}
+.up{color:var(--ok)}.dn{color:var(--no)}details.card summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
@@ -72,15 +79,15 @@ tr.cl{cursor:pointer}tr.cl:hover{background:var(--bg)}
 <div class="wrap">
   <div class="card" id="adm">
     <h2>⚙ Menu Admin / Supervisor</h2>
-    <p class="mu" style="margin-top:0">Untuk update data: refresh Excel seperti biasa, lalu upload file Excel yang sama.</p>
+    <p class="mu" style="margin-top:0">Update harian: refresh Excel seperti biasa, lalu upload file Excel yang sama. Data harian dibaca dari sheet <b>raw daily sls</b>.</p>
     <button class="btn p" onclick="fu.click()">⬆ Upload File Excel</button>
     <input id="fu" type="file" accept=".xlsx,.xls,.csv,.tsv,.json" hidden>
     <button class="btn" onclick="gh()">☁ Simpan untuk Semua Orang (GitHub)</button>
     <button class="btn" onclick="dl()">⬇ Download data.json</button>
-    <a href="Template_Upload_MSS.xlsx" download><button class="btn">📄 File Excel Template</button></a>
+    <a id="tpl" href="Template_Tracking_MSS.xlsx" download hidden><button class="btn">📄 File Excel Template</button></a>
     <div id="msg"></div>
   </div>
-  <div class="tabs"><button id="t1" onclick="tab('s')">👤 Salesman</button><button id="t2" onclick="tab('v')">📊 Supervisor</button></div>
+  <div class="tabs"><button id="t1" onclick="tab('s')">👤 Salesman</button><button id="t2" onclick="tab('v')">📊 Supervisor</button><button id="t3" onclick="tab('d')">📅 Harian</button></div>
   <div id="main"></div>
 </div>
 <script>
@@ -92,14 +99,14 @@ let D=null,S={t:"s",sm:null,day:"all",inc:false,z:false,q:"",o:{}};
 const tdy=(d=>d?d:7)(new Date().getDay()),esc=s=>String(s).replace(/'/g,"\\'");
 function calc(){D.O=D.rows.map(r=>{const m=[0,1,2,3].map(i=>num(r[4+i])*D.vat>D.thr[i]?1:0);return{c:r[0],n:r[1],s:r[2]||"Belum Masuk JP",d:+r[3]||0,m,t:m[0]+m[1]+m[2]+m[3],x:[4,5,6,7].some(i=>num(r[i])>0),sc:r[8]||""}})}
 let A0=0;function auto(){if(A0)return;A0=1;let q=new URLSearchParams(location.search).get("s");try{q=q||localStorage.mssSm}catch(e){}if(!q)return;const k=Object.keys(grp()).find(x=>x.toLowerCase()==q.toLowerCase());if(k)pick(k)}
-function init(d){D=d;calc();$("sub").textContent="Toko Provision • Bekasi • Data: "+(D.updated||"-")+" • "+fm(D.O.length)+" toko";R();if(D.O.length)auto()}
+function init(d){D=d;D.days=D.days||[];D.tx=D.tx||[];calc();calcDaily();S.dd=D.days.length-1;$("sub").textContent="Toko Provision • Bekasi • Data: "+(D.updated||"-")+" • "+fm(D.O.length)+" toko"+(D.days.length?" • Harian s/d "+fd(D.days[D.days.length-1]):"");R();if(D.O.length)auto()}
 function tab(t){S.t=t;R()}
 function grp(){const g={};D.O.forEach(o=>(g[o.s]=g[o.s]||[]).push(o));return g}
 const avg=a=>pc(a.reduce((z,o)=>z+o.t,0),a.length*4);
 function pick(s){try{localStorage.mssSm=s}catch(e){}S.sm=s;S.q="";S.inc=false;S.z=false;S.o={};const dd=[...new Set(grp()[s].map(o=>o.d))];S.day=dd.includes(tdy)?tdy:"all";S.t="s";R();scrollTo(0,0)}
 function R(){
-  $("t1").className=S.t=="s"?"on":"";$("t2").className=S.t=="v"?"on":"";
-  $("main").innerHTML=!D||!D.O.length?'<div class="card empty">Belum ada data. Buka menu ⚙ Admin lalu upload file Excel.</div>':(S.t=="v"?sup():(S.sm?me():list()));
+  $("t1").className=S.t=="s"?"on":"";$("t2").className=S.t=="v"?"on":"";$("t3").className=S.t=="d"?"on":"";
+  $("main").innerHTML=!D||!D.O.length?'<div class="card empty">Belum ada data. Buka menu ⚙ Admin lalu upload file Excel.</div>':(S.t=="v"?sup():S.t=="d"?dly():(S.sm?me():list()));
 }
 function list(){const g=grp();
   return'<div class="card"><h2>Halo! 👋 Siapa nama Anda?</h2><p class="mu" style="margin-top:0">Ketuk nama Anda untuk melihat toko yang harus dikunjungi.</p><div class="pick">'+
@@ -108,7 +115,7 @@ function me(){
   const A=grp()[S.sm]||[],p=avg(A),dc={};A.forEach(o=>dc[o.d]=(dc[o.d]||0)+1);
   let h=`<button class="back" onclick="S.sm=null;try{localStorage.removeItem('mssSm')}catch(e){}R()">← Ganti nama</button><div class="card"><div class="me"><div class="ring" style="--p:${p}"><b>${p}%</b></div><div><h2 style="margin:0">Halo, ${S.sm}! 👋</h2><div class="mu">Hari ini ${DN[tdy]} • ${A.length} toko</div><div class="mu">Skor MSS: makin tinggi makin baik</div></div></div><div class="sk4">`+
    SK.map((k,i)=>{const x=A.reduce((z,o)=>z+o.m[i],0);return`<div>${EM[i]}<b>${pc(x,A.length)}%</b>${k}<br><small>${x}/${A.length} toko</small></div>`}).join("")+`</div></div>`;
-  h+='<div class="days">'+`<button class="chip ${S.day=="all"?"on":""}" onclick="S.day='all';R()">Semua<small>${A.length} toko</small></button>`+
+  h+=myd();h+='<div class="days">'+`<button class="chip ${S.day=="all"?"on":""}" onclick="S.day='all';R()">Semua<small>${A.length} toko</small></button>`+
    [1,2,3,4,5,6,7,0].filter(d=>dc[d]).map(d=>`<button class="chip ${S.day==d?"on":""} ${d==tdy?"today":""}" onclick="S.day=${d};R()">${DS[d]}${d==tdy?" ⭐":""}<small>${dc[d]} toko</small></button>`).join("")+"</div>";
   h+=`<div class="tool"><input type="search" placeholder="🔍 Cari nama toko…" value="${S.q}" oninput="S.q=this.value;L()"></div><label class="tg"><input type="checkbox" ${S.inc?"checked":""} onchange="S.inc=this.checked;R()"> Tampilkan toko yang belum lengkap saja</label><label class="tg"><input type="checkbox" ${S.z?"checked":""} onchange="S.z=this.checked;R()"> Tampilkan toko yang belum transaksi sama sekali (${A.filter(o=>!o.x).length})</label><div class="mu" style="margin:6px 2px">💡 Ketuk kotak SKU merah (✗) untuk melihat minimal transaksi.</div><div id="lst"></div>`;
   setTimeout(L,0);return h}
@@ -132,24 +139,83 @@ function sup(){
   h+='<div class="card"><h2>Skor MSS per Hari Kunjungan</h2><small>Angka = skor rata-rata toko pada hari itu (jumlah toko di bawahnya)</small><div class="w"><table><tr><th>Salesman</th>'+[1,2,3,4,5,6,7].map(d=>`<th>${DS[d]}</th>`).join("")+"</tr>"+
    Object.keys(g).sort().map(s=>`<tr><td>${s}</td>`+[1,2,3,4,5,6,7].map(d=>{const a=g[s].filter(o=>o.d==d);if(!a.length)return"<td>-</td>";const p=avg(a);return`<td><span class="hm ${p>=60?"g1":p>=40?"g2":"g3"}">${p}%</span><br><small>${a.length} toko</small></td>`}).join("")+"</tr>").join("")+"</table></div></div>";
   return h}
-// Upload: file Excel ASLI (sheet RAW SO + jp + Treshold), tanpa perubahan format
+// ===== Harian (dari sheet raw daily sls) =====
+const MON=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"],BJ="Belum Masuk JP";
+const fd=i=>{const[y,m,d]=i.split("-");return +d+" "+MON[m-1]},fw=i=>DS[new Date(i+"T00:00:00Z").getUTCDay()||7];
+// Sheet berisi 4 blok SKU (BB, Dancow, Milo Tonic, Milo UHT): tiap blok = kode toko, nama toko, sellout per tanggal.
+function parseDaily(ws){
+  const R=XLSX.utils.sheet_to_json(ws,{header:1,raw:true}),g=(r,i)=>{const v=r&&r[i];return v==null?"":v},hd=R[5]||[],sk=R[2]||[],out=[];
+  const dt=v=>typeof v=="number"&&v>40000&&v<80000?new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5).toISOString().slice(0,10):(typeof v=="string"&&/^\d{4}-\d\d-\d\d/.test(v)?v.slice(0,10):null);
+  const si=n=>/bear/i.test(n)?0:/dancow/i.test(n)?1:/tonic/i.test(n)?2:/uht/i.test(n)?3:-1;
+  for(let c=0;c<sk.length;c++){
+    if(g(sk,c)!=="SKU[Local prod hier L5]")continue;const k=si(String(g(sk,c+1)));if(k<0)continue;
+    const cols=[];for(let j=c+2;dt(g(hd,j));j++)cols.push([j,dt(g(hd,j))]);
+    for(let i=6;i<R.length;i++){const r=R[i],code=g(r,c);if(typeof code!="string"||!/^\d+_/.test(code))continue;
+      cols.forEach(([j,iso])=>{const x=g(r,j),v=typeof x=="number"?x:num(x);if(v)out.push([code,iso,k,v])})}}
+  const days=[...new Set(out.map(x=>x[1]))].sort(),ix={};days.forEach((d,i)=>ix[d]=i);
+  return{days,tx:out.map(([c,d,k,v])=>[c,ix[d],k,v])}}
+// MSS baru di hari H = toko belum pernah transaksi SKU itu sebelum H, dan nilai transaksi H >= minimal transaksi (logika sheet).
+function calcDaily(){
+  const nd=D.days.length,vat=D.vat||1.056,sm={},Y={},ser={};D.O.forEach(o=>sm[o.c]=o.s);
+  const mk=s=>Y[s]||(Y[s]={m:Array.from({length:nd},()=>[0,0,0,0]),a:Array.from({length:nd},()=>new Set()),v:Array(nd).fill(0)});
+  D.tx.forEach(([c,d,k,v])=>{const e=c+"|"+k;(ser[e]=ser[e]||[]).push([d,v])});
+  Object.keys(ser).forEach(e=>{const i=e.lastIndexOf("|"),c=e.slice(0,i),k=+e.slice(i+1),y=mk(sm[c]||BJ);let mx=0;
+    ser[e].sort((p,q)=>p[0]-q[0]).forEach(([d,v])=>{y.v[d]+=v;if(v>0)y.a[d].add(c);if(v*vat-D.thr[k]>1e-4&&mx<=0)y.m[d][k]++;if(v>mx)mx=v})});
+  Object.keys(grp()).forEach(mk);D.Y={};
+  Object.keys(Y).forEach(s=>{const y=Y[s];D.Y[s]={m:y.m,a:y.a.map(x=>x.size),v:y.v,t:y.m.map(x=>x[0]+x[1]+x[2]+x[3])}})}
+const ys=()=>Object.keys(D.Y).sort((a,b)=>(a==BJ)-(b==BJ)||a.localeCompare(b)),sumd=(f,d)=>ys().reduce((z,s)=>z+f(D.Y[s],d),0);
+const fmd=x=>`<span class="${x>=0?"up":"dn"}">${x>0?"+":""}${x}</span>`;
+function myd(){
+  const y=D.Y&&D.Y[S.sm];if(!y||!D.days.length)return"";const n=D.days.length-1;
+  return`<details class="card"><summary>📅 Harian saya • ${fd(D.days[n])}: ${y.t[n]} MSS baru${n?" (sebelumnya "+y.t[n-1]+")":""}</summary><div class="w"><table><tr><th>Tanggal</th><th>Toko</th>${SK.map((k,i)=>`<th>${EM[i]}</th>`).join("")}<th>Total</th></tr>`+
+   D.days.map((x,i)=>i).reverse().map(i=>`<tr><td>${fw(D.days[i])} ${fd(D.days[i])}</td><td>${y.a[i]}</td>${y.m[i].map(x=>`<td>${x}</td>`).join("")}<td><b>${y.t[i]}</b></td></tr>`).join("")+
+   `</table></div><small>MSS baru = toko yang pertama kali transaksi SKU itu dan nilainya mencapai minimal transaksi.</small></details>`}
+function dly(){
+  if(!D.days.length)return'<div class="card empty">Belum ada data harian. Upload Excel yang berisi sheet <b>raw daily sls</b> lewat menu ⚙ Admin.</div>';
+  const nd=D.days.length,d=Math.min(Math.max(S.dd==null?nd-1:S.dd,0),nd-1),p=d?d-1:-1,L=ys(),T=L.filter(s=>s!=BJ),g=grp(),
+   tot=i=>i<0?0:sumd((y,j)=>y.t[j],i),skt=(k,i)=>i<0?0:sumd((y,j)=>y.m[j][k],i),
+   cmp=(a,b)=>p<0?"":`<small class="${a>=b?"up":"dn"}">${a>=b?"▲ +"+(a-b):"▼ −"+(b-a)} vs ${fd(D.days[p])}</small>`;
+  const act=sumd((y,j)=>y.a[j],d),val=sumd((y,j)=>y.v[j],d),avgT=T.length?T.reduce((z,s)=>z+D.Y[s].t[d],0)/T.length:0,cls=v=>v<=0?"g3":v>=avgT?"g1":"g2";
+  let h=`<div class="card"><h2>📅 Performa Harian</h2><small>MSS baru = toko yang pertama kali transaksi SKU itu dan nilainya mencapai minimal transaksi (logika sheet raw daily sls).</small><div class="days" style="margin-top:8px">`+
+   D.days.map((x,i)=>`<button class="chip ${i==d?"on":""}" onclick="S.dd=${i};R()">${fw(x)} ${fd(x)}<small>${tot(i)} MSS</small></button>`).join("")+`</div></div>`;
+  h+=`<div class="kpi"><div class="k"><small>🎯 MSS baru ${fd(D.days[d])}</small><div class="big">${tot(d)}</div>${cmp(tot(d),tot(p))}</div>`+
+   SK.map((k,i)=>`<div class="k"><small>${EM[i]} ${k}</small><div class="big">${skt(i,d)}</div>${cmp(skt(i,d),skt(i,p))}</div>`).join("")+
+   `<div class="k"><small>🏪 Toko transaksi</small><div class="big">${act}</div>${cmp(act,p<0?0:sumd((y,j)=>y.a[j],p))}</div><div class="k"><small>💰 Sellout 4 SKU</small><div class="big" style="font-size:22px">Rp ${fm(Math.round(val/1e5)/10)} jt</div></div></div>`;
+  const O=[...T].sort((a,b)=>D.Y[b].t[d]-D.Y[a].t[d]||a.localeCompare(b)).concat(L.filter(s=>s==BJ));
+  h+=`<div class="card" style="margin-top:12px"><h2>Salesman • ${fw(D.days[d])} ${fd(D.days[d])}</h2><small>Ketuk nama untuk melihat toko-tokonya. Hijau = di atas rata-rata tim (${avgT.toFixed(1)}), kuning = di bawah, merah = 0 MSS baru.</small><div class="w"><table><tr><th>Salesman</th><th>Toko transaksi</th>${SK.map((k,i)=>`<th>${EM[i]} ${k}</th>`).join("")}<th>Total</th><th>vs ${p<0?"-":fd(D.days[p])}</th><th>Sellout</th></tr>`+
+   O.map(s=>{const y=D.Y[s];return`<tr class="cl" ${g[s]?`onclick="pick('${esc(s)}')"`:""}><td><b>${s}</b></td><td>${y.a[d]}</td>${y.m[d].map(x=>`<td>${x}</td>`).join("")}<td><span class="hm ${cls(y.t[d])}">${y.t[d]}</span></td><td>${p<0?"-":fmd(y.t[d]-y.t[p])}</td><td>${fm(Math.round(y.v[d]/1e3))} rb</td></tr>`}).join("")+
+   `<tr><td><b>Total tim</b></td><td><b>${act}</b></td>${SK.map((k,i)=>`<td><b>${skt(i,d)}</b></td>`).join("")}<td><b>${tot(d)}</b></td><td>${p<0?"-":fmd(tot(d)-tot(p))}</td><td>${fm(Math.round(val/1e3))} rb</td></tr></table></div></div>`;
+  const mxv=Math.max(1,...D.days.map((x,i)=>tot(i)));
+  h+=`<div class="card"><h2>Tren MSS baru per hari (semua salesman)</h2><div class="bars">`+D.days.map((x,i)=>`<div class="bc ${i==d?"on":""}" onclick="S.dd=${i};R()"><b>${tot(i)}</b><i style="height:${Math.round(tot(i)/mxv*60)}%"></i><small>${x.slice(8)}/${x.slice(5,7)}</small></div>`).join("")+`</div></div>`;
+  const K=S.dk||"all",vv=(y,i)=>K=="tx"?y.a[i]:K=="all"?y.t[i]:y.m[i][K],row=s=>D.days.map((x,i)=>vv(D.Y[s],i)),sm=a=>a.reduce((z,x)=>z+x,0),
+   ca=D.days.map((x,i)=>T.length?T.reduce((z,s)=>z+vv(D.Y[s],i),0)/T.length:0),M=[...T].sort((a,b)=>sm(row(b))-sm(row(a))||a.localeCompare(b)).concat(L.filter(s=>s==BJ));
+  h+=`<div class="card"><h2>Rekap harian per salesman</h2><small>Ketuk tanggal untuk membuka rincian hari itu.</small><div class="days" style="margin-top:8px">`+
+   [["all","Semua SKU"],...SK.map((k,i)=>[""+i,EM[i]+" "+k]),["tx","🏪 Toko transaksi"]].map(([c,t])=>`<button class="chip ${K==c?"on":""}" onclick="S.dk='${c}';R()">${t}</button>`).join("")+
+   `</div><div class="w"><table class="mx"><tr><th>Salesman</th>`+D.days.map((x,i)=>`<th class="cl2 ${i==d?"on":""}" onclick="S.dd=${i};R()">${fd(x).replace(" ","\u00a0")}</th>`).join("")+`<th>Total</th><th>Rata²/hari</th></tr>`+
+   M.map(s=>{const r=row(s);return`<tr class="cl" ${g[s]?`onclick="pick('${esc(s)}')"`:""}><td><b>${s}</b></td>`+r.map((v,i)=>`<td><span class="hm ${v<=0?"g3":v>=ca[i]?"g1":"g2"}">${v}</span></td>`).join("")+`<td><b>${sm(r)}</b></td><td>${(sm(r)/nd).toFixed(1)}</td></tr>`}).join("")+
+   `<tr><td><b>Total tim</b></td>`+D.days.map((x,i)=>`<td><b>${sumd(vv,i)}</b></td>`).join("")+`<td><b>${D.days.reduce((z,x,i)=>z+sumd(vv,i),0)}</b></td><td>${(D.days.reduce((z,x,i)=>z+sumd(vv,i),0)/nd).toFixed(1)}</td></tr></table></div></div>`;
+  return h}
+fetch("Template_Tracking_MSS.xlsx",{method:"HEAD"}).then(r=>{if(r.ok)$("tpl").hidden=false}).catch(()=>{});
+// Upload: file Excel ASLI (sheet raw so + jp + treshold + raw daily sls), tanpa perubahan format
 fu.onchange=async e=>{const f=e.target.files[0];if(!f)return;try{
   if(/\.json$/i.test(f.name)){init(JSON.parse(await f.text()));msg("Data JSON dimuat.");return}
-  const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),sh=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""});
-  let rows,extra={};
-  if(wb.SheetNames.includes("RAW SO")){
+  const buf=await f.arrayBuffer(),lc={};XLSX.read(buf,{type:"array",bookSheets:true}).SheetNames.forEach(n=>lc[n.toLowerCase().trim()]=n);const nm=n=>lc[n.toLowerCase().trim()],want=["raw so","jp","treshold","raw daily sls"].map(nm).filter(Boolean);
+  const wb=XLSX.read(buf,{type:"array",sheets:want.length?want:undefined,cellFormula:false,cellStyles:false,cellHTML:false,cellNF:false}),sh=n=>XLSX.utils.sheet_to_json(wb.Sheets[nm(n)],{header:1,defval:""});
+  let rows,extra={days:[],tx:[]};
+  if(nm("raw so")){
     const raw=sh("RAW SO"),a=raw.slice(5).filter(r=>r[0]);
-    let jm={};if(wb.SheetNames.includes("jp"))sh("jp").slice(1).forEach(r=>{if(r[38]!==""&&r[38]!=="Customer Code"&&r[40]!==""){const k="0001887881_"+r[38];if(!jm[k])jm[k]=[r[40],r[41],r[39]]}});
+    let jm={};if(nm("jp"))sh("jp").slice(1).forEach(r=>{if(r[38]!==""&&r[38]!=="Customer Code"&&r[40]!==""){const k="0001887881_"+r[38];if(!jm[k])jm[k]=[r[40],r[41],r[39]]}});
     let sb={};sh("jp").slice(1).forEach(r=>{if(r[23]!==""&&r[23]!=="Customer Code"){const k="0001887881_"+r[23];if(!sb[k])sb[k]=r[29]}});
     rows=a.map(r=>{const j=jm[r[0]];return[r[0],r[1],j?j[0]:(r[21]||"Belum Masuk JP"),j?j[1]:(+r[22]||0),r[2],r[3],r[4],r[5],sb[r[0]]||""]});
     const hv=new Set(rows.map(r=>r[0]));Object.keys(jm).forEach(k=>{if(!hv.has(k))rows.push([k,jm[k][2],jm[k][0]||"Belum Masuk JP",jm[k][1],0,0,0,0,sb[k]||""])});
-    if(wb.SheetNames.includes("Treshold")){const t=sh("Treshold").slice(3,7).map(r=>num(r[0])*num(r[2]));if(t.every(x=>x>0)){extra.thr=t;extra.qty=sh("Treshold").slice(3,7).map(r=>num(r[2]))}}
+    if(nm("treshold")){const t=sh("Treshold").slice(3,7).map(r=>num(r[0])*num(r[2]));if(t.every(x=>x>0)){extra.thr=t;extra.qty=sh("Treshold").slice(3,7).map(r=>num(r[2]))}}
     if(num(raw[2]&&raw[2][17])>0)extra.target=num(raw[2][17]);
+    if(nm("raw daily sls")){const dd=parseDaily(wb.Sheets[nm("raw daily sls")]);extra.days=dd.days;extra.tx=dd.tx}
   }else{const a=sh(wb.SheetNames[0]).slice(1).filter(r=>r[0]);rows=a.map(r=>r.slice(0,9))}
   if(!rows.length)throw Error("Tidak ada baris data");
-  init({...D,...extra,updated:(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"))(new Date()),rows});msg("✔ "+rows.length+" toko dimuat. Klik 'Simpan untuk Semua Orang' agar tampil di semua HP.")
+  init({...D,...extra,updated:(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"))(new Date()),rows});msg("✔ "+rows.length+" toko & "+extra.days.length+" hari data harian dimuat. Klik 'Simpan untuk Semua Orang' agar tampil di semua HP.")
  }catch(x){msg("Gagal membaca file: "+x.message)}e.target.value=""};
-const J=()=>JSON.stringify({updated:D.updated,vat:D.vat,target:D.target,thr:D.thr,cols:D.cols,rows:D.rows});
+const J=()=>JSON.stringify({updated:D.updated,vat:D.vat,target:D.target,thr:D.thr,cols:D.cols,qty:D.qty,days:D.days,tx:D.tx,rows:D.rows});
 function dl(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([J()],{type:"application/json"}));a.download="data.json";a.click()}
 async function gh(){
   let repo=prompt("Nama repo GitHub, contoh: namaanda/mss-dashboard",localStorage.mssRepo||"");if(!repo)return;
