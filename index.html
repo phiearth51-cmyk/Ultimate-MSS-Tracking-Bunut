@@ -49,6 +49,7 @@ input[type=search],select{flex:1;min-width:160px;font:inherit;padding:12px;borde
 .sc{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;padding:2px 10px;border-radius:10px;background:var(--bg);color:var(--mu)}.sc.bg{background:#efe7ff;color:#6d28d9}.sc.sm{background:#e3f0ff;color:#1d4ed8}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]) .sc.bg{background:#2e2150;color:#c4b5fd}:root:not([data-theme=light]) .sc.sm{background:#16294a;color:#93c5fd}}
 .pl.no{cursor:pointer}.tip{background:var(--wab);border:2px solid var(--wa);border-radius:12px;padding:10px 12px;margin:0 0 8px;font-size:14px}.tip b{font-size:17px}
+.map{display:inline-block;margin-top:6px;padding:7px 12px;border-radius:12px;background:var(--ac);color:#fff!important;font-weight:600;font-size:13px;text-decoration:none}
 .dh{font-weight:700;margin:14px 2px 8px;font-size:15px;color:var(--mu)}
 .back{background:none;border:0;color:var(--ac);font:inherit;font-weight:600;padding:6px 0;cursor:pointer}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
@@ -97,7 +98,7 @@ const num=v=>{v=parseFloat(String(v??"").replace(/[^\d.\-]/g,""));return isNaN(v
 const msg=t=>$("msg").textContent=t||"";
 let D=null,S={t:"s",sm:null,day:"all",inc:false,z:false,q:"",o:{}};
 const tdy=(d=>d?d:7)(new Date().getDay()),esc=s=>String(s).replace(/'/g,"\\'");
-function calc(){D.O=D.rows.map(r=>{const m=[0,1,2,3].map(i=>num(r[4+i])*D.vat>D.thr[i]?1:0);return{c:r[0],n:r[1],s:r[2]||"Belum Masuk JP",d:+r[3]||0,m,t:m[0]+m[1]+m[2]+m[3],x:[4,5,6,7].some(i=>num(r[i])>0),sc:r[8]||""}})}
+function calc(){D.O=D.rows.map(r=>{const m=[0,1,2,3].map(i=>num(r[4+i])*D.vat>D.thr[i]?1:0);return{c:r[0],n:r[1],s:r[2]||"Belum Masuk JP",d:+r[3]||0,m,t:m[0]+m[1]+m[2]+m[3],x:[4,5,6,7].some(i=>num(r[i])>0),sc:r[8]||"",la:+r[9]||0,lo:+r[10]||0,ad:r[11]||""}})}
 let A0=0;function auto(){if(A0)return;A0=1;let q=new URLSearchParams(location.search).get("s");try{q=q||localStorage.mssSm}catch(e){}if(!q)return;const k=Object.keys(grp()).find(x=>x.toLowerCase()==q.toLowerCase());if(k)pick(k)}
 function init(d){D=d;D.days=D.days||[];D.tx=D.tx||[];calc();calcDaily();S.dd=D.days.length-1;$("sub").textContent="Toko Provision • Bekasi • Data: "+(D.updated||"-")+" • "+fm(D.O.length)+" toko"+(D.days.length?" • Harian s/d "+fd(D.days[D.days.length-1]):"");R();if(D.O.length)auto()}
 function tab(t){S.t=t;R()}
@@ -126,7 +127,7 @@ function L(){
   let h="",last=-1;if(!A.length)h='<div class="empty">Tidak ada toko. 🎉</div>';
   A.forEach(o=>{if(S.day=="all"&&o.d!=last){last=o.d;h+=`<div class="dh">📅 ${DN[o.d]}</div>`}
     const miss=SK.filter((k,i)=>!o.m[i]).join(", ");
-    h+=`<div class="toko ${o.t==4?"full":!o.x?"zero":"part"}"><div class="th"><div><b>${o.n}</b><br><small>${o.c}</small>${o.sc?`<br><span class="sc ${/big/i.test(o.sc)?"bg":/small/i.test(o.sc)?"sm":""}">🏪 ${o.sc}</span>`:""}</div><span class="score">${o.t}/4</span></div><div class="sku">`+
+    h+=`<div class="toko ${o.t==4?"full":!o.x?"zero":"part"}"><div class="th"><div><b>${o.n}</b><br><small>${o.c}</small>${o.sc?`<br><span class="sc ${/big/i.test(o.sc)?"bg":/small/i.test(o.sc)?"sm":""}">🏪 ${o.sc}</span>`:""}${o.la?`<br><a class="map" href="https://www.google.com/maps/search/?api=1&query=${o.la},${o.lo}" target="_blank" rel="noopener">📍 ${o.la.toFixed(6)}, ${o.lo.toFixed(6)} • Buka di Google Maps</a>`:`<br><small>📍 Lokasi belum tersedia</small>`}${o.ad?`<br><small>${o.ad}</small>`:""}</div><span class="score">${o.t}/4</span></div><div class="sku">`+
      o.m.map((v,i)=>`<div class="pl ${v?"ok":"no"}" ${v?"":`onclick="tp('${o.c}',${i})"`}><i>${EM[i]}</i>${SK[i]}<b>${v?"✓":"✗"}</b></div>`).join("")+
      `</div>`+o.m.map((v,i)=>!v&&S.o[o.c+"|"+i]?`<div class="tip">💡 <b>${SK[i]}</b>: minimal transaksi <b>Rp ${fm(Math.ceil(D.thr[i]*(D.ppn||1.11)))}</b>${D.qty?" (±"+D.qty[i]+" pcs)":""}<br><small>Sudah termasuk PPN 11%, jadi transaksikan di harga nett.</small></div>`:"").join("")+`<div class="need ${o.t==4?"o":""}">${o.t==4?"🎉 Lengkap! Pertahankan ya.":(!o.x?"🚨 Belum ada transaksi sama sekali. Tawarkan semua SKU":o.t==0?"⚠ Sudah ada transaksi, tapi belum memenuhi MSS. Tawarkan: "+miss:"👉 Tawarkan: "+miss)}</div></div>`});
   $("lst").innerHTML=h}
@@ -203,15 +204,16 @@ fu.onchange=async e=>{const f=e.target.files[0];if(!f)return;try{
   const wb=XLSX.read(buf,{type:"array",sheets:want.length?want:undefined,cellFormula:false,cellStyles:false,cellHTML:false,cellNF:false}),sh=n=>XLSX.utils.sheet_to_json(wb.Sheets[nm(n)],{header:1,defval:""});
   let rows,extra={days:[],tx:[]};
   if(nm("raw so")){
-    const raw=sh("RAW SO"),a=raw.slice(5).filter(r=>r[0]);
+    const raw=sh("RAW SO"),a=raw.slice(5).filter(r=>r[0]&&/^\d+_/.test(String(r[0])));
     let jm={};if(nm("jp"))sh("jp").slice(1).forEach(r=>{if(r[38]!==""&&r[38]!=="Customer Code"&&r[40]!==""){const k="0001887881_"+r[38];if(!jm[k])jm[k]=[r[40],r[41],r[39]]}});
     let sb={};sh("jp").slice(1).forEach(r=>{if(r[23]!==""&&r[23]!=="Customer Code"){const k="0001887881_"+r[23];if(!sb[k])sb[k]=r[29]}});
-    rows=a.map(r=>{const j=jm[r[0]];return[r[0],r[1],j?j[0]:(r[21]||"Belum Masuk JP"),j?j[1]:(+r[22]||0),r[2],r[3],r[4],r[5],sb[r[0]]||""]});
-    const hv=new Set(rows.map(r=>r[0]));Object.keys(jm).forEach(k=>{if(!hv.has(k))rows.push([k,jm[k][2],jm[k][0]||"Belum Masuk JP",jm[k][1],0,0,0,0,sb[k]||""])});
-    if(nm("treshold")){const t=sh("Treshold").slice(3,7).map(r=>num(r[0])*num(r[2]));if(t.every(x=>x>0)){extra.thr=t;extra.qty=sh("Treshold").slice(3,7).map(r=>num(r[2]))}}
+    let gm={};sh("jp").slice(1).forEach(r=>{const la=num(r[33]),lo=num(r[34]);if(r[23]!==""&&r[23]!=="Customer Code"&&Math.abs(la)>1e-4&&Math.abs(lo)>1e-4&&la>=-11&&la<=6&&lo>=95&&lo<=141){const k="0001887881_"+r[23];if(!gm[k])gm[k]=[la,lo,r[31]||""]}});const ex=k=>{const g=gm[k]||["","",""];return[sb[k]||"",g[0],g[1],g[2]]};
+    rows=a.map(r=>{const j=jm[r[0]];return[r[0],r[1],j?j[0]:(r[21]||"Belum Masuk JP"),j?j[1]:(+r[22]||0),r[2],r[3],r[4],r[5],...ex(r[0])]});
+    const hv=new Set(rows.map(r=>r[0]));Object.keys(jm).forEach(k=>{if(!hv.has(k))rows.push([k,jm[k][2],jm[k][0]||"Belum Masuk JP",jm[k][1],0,0,0,0,...ex(k)])});
+    if(nm("treshold")){const t=sh("Treshold").slice(3,7).map(r=>num(r[3])||num(r[0])*num(r[2]));if(t.every(x=>x>0)){extra.thr=t;extra.qty=sh("Treshold").slice(3,7).map(r=>num(r[2]))}}
     if(num(raw[2]&&raw[2][17])>0)extra.target=num(raw[2][17]);
     if(nm("raw daily sls")){const dd=parseDaily(wb.Sheets[nm("raw daily sls")]);extra.days=dd.days;extra.tx=dd.tx}
-  }else{const a=sh(wb.SheetNames[0]).slice(1).filter(r=>r[0]);rows=a.map(r=>r.slice(0,9))}
+  }else{const a=sh(wb.SheetNames[0]).slice(1).filter(r=>r[0]);rows=a.map(r=>r.slice(0,12))}
   if(!rows.length)throw Error("Tidak ada baris data");
   init({...D,...extra,updated:(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"))(new Date()),rows});msg("✔ "+rows.length+" toko & "+extra.days.length+" hari data harian dimuat. Klik 'Simpan untuk Semua Orang' agar tampil di semua HP.")
  }catch(x){msg("Gagal membaca file: "+x.message)}e.target.value=""};
